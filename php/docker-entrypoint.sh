@@ -53,4 +53,14 @@ fi
 # fix ownership so the FPM worker can write (uploads, cache, plugins)
 chown -R www-data:www-data /var/www/html || true
 
+# If WordPress core is still not available, serve a temporary page instead of a blank 404.
+if [ ! -f /var/www/html/wp-load.php ] && [ ! -f /var/www/html/index.php ]; then
+    cat > /var/www/html/index.php <<'PHP'
+<?php
+header('Content-Type: text/html; charset=utf-8');
+echo '<h1>WordPress is still installing</h1>';
+echo '<p>Please wait a moment while the container finishes setup.</p>';
+PHP
+fi
+
 exec "$@"
