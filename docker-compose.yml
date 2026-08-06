@@ -106,6 +106,9 @@ services:
     image: filebrowser/filebrowser:latest
     restart: unless-stopped
     command: --port 80 --database /database/filebrowser.db --root /srv
+    environment:
+      FB_USERNAME: ${FB_USERNAME:-admin}
+      FB_PASSWORD: ${FB_PASSWORD:-admin}
     expose:
       - "80"
     volumes:
