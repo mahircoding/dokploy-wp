@@ -15,31 +15,37 @@ cd /var/www/html
 # WordPress core download (idempotent / safe if interrupted).
 if [ ! -f wp-config.php ]; then
     echo "Downloading WordPress..."
-    wp core download --allow-root
+    if ! wp core download --allow-root; then
+        echo "WordPress download failed; continuing so PHP-FPM can still start."
+    fi
 fi
 
 # Configure WordPress if not yet configured.
 if [ ! -f wp-config.php ]; then
     echo "Creating wp-config.php..."
-    wp config create \
+    if ! wp config create \
         --dbname="${DB_NAME:-wordpress}" \
         --dbuser="${DB_USER:-wordpress}" \
         --dbpass="${DB_PASSWORD:-wordpress}" \
         --dbhost="${DB_HOST:-db}" \
-        --allow-root
+        --allow-root; then
+        echo "WordPress config creation failed; continuing so PHP-FPM can still start."
+    fi
 fi
 
 # Run the install routine if it hasn't run yet.
 if ! wp core is-installed --allow-root 2>/dev/null; then
     echo "Installing WordPress..."
-    wp core install \
+    if ! wp core install \
         --url="${WP_URL:-${DOMAIN:-localhost}}" \
         --title="${WP_TITLE:-My Website}" \
         --admin_user="${WP_USER:-admin}" \
         --admin_password="${WP_PASSWORD:-admin}" \
         --admin_email="${WP_EMAIL:-admin@example.com}" \
         --skip-email \
-        --allow-root
+        --allow-root; then
+        echo "WordPress install failed; continuing so PHP-FPM can still start."
+    fi
 else
     echo "WordPress already installed."
 fi
