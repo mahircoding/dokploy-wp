@@ -1,0 +1,122 @@
+name: wordpress-hosting
+
+services:
+
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    ports:
+      - "80"
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - wp
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -fsS http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  wordpress:
+    build:
+      context: ./php
+      args:
+        PHP_VERSION: ${PHP_VERSION}
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./backup:/backup            # backup/restore scripts read+write here
+    networks:
+      - wp
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+  mariadb:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - wp
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - wp
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+    networks:
+      - wp
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    restart: unless-stopped
+    volumes:
+      - wordpress_data:/srv
+      - filebrowser_data:/database
+    networks:
+      - wp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+
+  wordpress_data:
+
+  mariadb_data:
+
+  redis_data:
+
+  filebrowser_data:
+
+networks:
+
+  wp:

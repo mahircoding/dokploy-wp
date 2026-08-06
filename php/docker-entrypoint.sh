@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Wait for MariaDB to be reachable before doing anything.
+until mysqladmin ping -h"${DB_HOST:-db}" -u"${DB_USER:-wordpress}" -p"${DB_PASSWORD:-wordpress}" --silent; do
+    echo "Waiting for MariaDB at ${DB_HOST}..."
+    sleep 2
+done
+echo "MariaDB is ready."
+
+mkdir -p /var/www/html
+cd /var/www/html
+
+# WordPress core download (idempotent / safe if interrupted).
+if [ ! -f wp-config.php ]; then
+    echo "Downloading WordPress..."
+    wp core download --allow-root
+fi
+
+# Configure WordPress if not yet configured.
+if [ ! -f wp-config.php ]; then
+    echo "Creating wp-config.php..."
+    wp config create \
+        --dbname="${DB_NAME:-wordpress}" \
+        --dbuser="${DB_USER:-wordpress}" \
+        --dbpass="${DB_PASSWORD:-wordpress}" \
+        --dbhost="${DB_HOST:-db}" \
+        --allow-root
+fi
+
+# Run the install routine if it hasn't run yet.
+if ! wp core is-installed --allow-root 2>/dev/null; then
+    echo "Installing WordPress..."
+    wp core install \
+        --url="${WP_URL:-${DOMAIN:-localhost}}" \
+        --title="${WP_TITLE:-My Website}" \
+        --admin_user="${WP_USER:-admin}" \
+        --admin_password="${WP_PASSWORD:-admin}" \
+        --admin_email="${WP_EMAIL:-admin@example.com}" \
+        --skip-email \
+        --allow-root
+else
+    echo "WordPress already installed."
+fi
+
+# fix ownership so the FPM worker can write (uploads, cache, plugins)
+chown -R www-data:www-data /var/www/html || true
+
+exec "$@"
