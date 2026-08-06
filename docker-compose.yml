@@ -13,7 +13,7 @@ services:
     networks:
       - wp
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -fsS http://127.0.0.1/ || exit 1"]
+      test: ["CMD", "sh", "-c", "wget -q --spider http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -24,8 +24,19 @@ services:
       args:
         PHP_VERSION: ${PHP_VERSION}
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      DB_NAME: ${DB_NAME:-wordpress}
+      DB_USER: ${DB_USER:-wordpress}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST:-mariadb}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      DOMAIN: ${DOMAIN:-localhost}
+      WP_URL: ${WP_URL}
+      WP_TITLE: ${WP_TITLE:-My Website}
+      WP_USER: ${WP_USER:-admin}
+      WP_PASSWORD: ${WP_PASSWORD:-admin}
+      WP_EMAIL: ${WP_EMAIL:-admin@example.com}
+      TZ: ${TZ:-Asia/Jakarta}
     depends_on:
       mariadb:
         condition: service_healthy
@@ -70,7 +81,7 @@ services:
       - -c
       - 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispassword}
     volumes:
       - redis_data:/data
     networks:
