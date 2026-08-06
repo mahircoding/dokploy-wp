@@ -1,5 +1,3 @@
-name: wordpress-hosting
-
 services:
 
   nginx:
