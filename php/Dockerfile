@@ -48,10 +48,15 @@ RUN docker-php-ext-install \
     bcmath
 
 RUN set -eux; \
-    if apt-cache show php-redis >/dev/null 2>&1 && apt-cache show php-imagick >/dev/null 2>&1; then \
-        apt-get install -y --no-install-recommends php-redis php-imagick; \
-    else \
-        pecl install redis imagick && docker-php-ext-enable redis imagick; \
+    if command -v pecl >/dev/null 2>&1; then \
+        pecl install redis || true; \
+        pecl install imagick || true; \
+    fi; \
+    if [ -f "$(php-config --extension-dir)/redis.so" ]; then \
+        docker-php-ext-enable redis; \
+    fi; \
+    if [ -f "$(php-config --extension-dir)/imagick.so" ]; then \
+        docker-php-ext-enable imagick; \
     fi
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
