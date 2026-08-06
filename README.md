@@ -22,6 +22,16 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+## Multi-project Dokploy usage
+
+This template is designed to be deployed repeatedly as separate Dokploy projects.
+Each deployment gets its own Compose project, database, volumes, and network,
+so you can run multiple WordPress sites without reusing the same host port or
+shared state.
+
+For Dokploy, keep the Nginx service internal and let the platform route traffic
+through your domain. This avoids port conflicts when you deploy many sites.
+
 On first boot the `wordpress` container downloads WordPress, creates
 `wp-config.php` from the `.env` values, and runs `wp core install` with the
 credentials you set (`WP_USER` / `WP_PASSWORD` / `WP_EMAIL`). Subsequent
