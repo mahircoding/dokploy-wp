@@ -105,6 +105,7 @@ services:
   filebrowser:
     image: filebrowser/filebrowser:latest
     restart: unless-stopped
+    entrypoint: ["/entrypoint.sh"]
     command: --port 80 --database /database/filebrowser.db --root /srv
     environment:
       FB_USERNAME: ${FB_USERNAME:-admin}
@@ -112,6 +113,7 @@ services:
     expose:
       - "80"
     volumes:
+      - ./filebrowser-entrypoint.sh:/entrypoint.sh:ro
       - wordpress_data:/srv
       - filebrowser_data:/database
     networks:
