@@ -13,7 +13,7 @@ mkdir -p /var/www/html
 cd /var/www/html
 
 # WordPress core download (idempotent / safe if interrupted).
-if [ ! -f wp-config.php ]; then
+if [ ! -f wp-load.php ] && [ ! -f wp-settings.php ]; then
     echo "Downloading WordPress..."
     if ! wp core download --allow-root; then
         echo "WordPress download failed; continuing so PHP-FPM can still start."
@@ -21,7 +21,7 @@ if [ ! -f wp-config.php ]; then
 fi
 
 # Configure WordPress if not yet configured.
-if [ ! -f wp-config.php ]; then
+if [ ! -f wp-config.php ] && [ -f wp-load.php ]; then
     echo "Creating wp-config.php..."
     if ! wp config create \
         --dbname="${DB_NAME:-wordpress}" \
@@ -34,7 +34,7 @@ if [ ! -f wp-config.php ]; then
 fi
 
 # Run the install routine if it hasn't run yet.
-if ! wp core is-installed --allow-root 2>/dev/null; then
+if [ -f wp-load.php ] && ! wp core is-installed --allow-root 2>/dev/null; then
     echo "Installing WordPress..."
     if ! wp core install \
         --url="${WP_URL:-${DOMAIN:-localhost}}" \
@@ -46,7 +46,7 @@ if ! wp core is-installed --allow-root 2>/dev/null; then
         --allow-root; then
         echo "WordPress install failed; continuing so PHP-FPM can still start."
     fi
-else
+elif [ -f wp-load.php ]; then
     echo "WordPress already installed."
 fi
 
